@@ -1,0 +1,219 @@
+\documentclass[11pt,a4paper]{article}
+
+% Codificación, idioma y tipografía
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% Maquetación y matemáticas
+\usepackage[a4paper,margin=2.6cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=blue!60!black,urlcolor=blue!60!black,pdftitle={Estado del arte: algoritmo de Grover bajo modelos de ruido}}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{1.2em}
+\emergencystretch=2em
+
+\title{Estado del arte de la evaluación del algoritmo de Grover\\bajo distintos modelos de ruido}
+\author{}
+\date{Noviembre de 2026}
+
+\begin{document}
+\maketitle
+
+\section{Introducción}
+
+El algoritmo de Grover, presentado por Lov K. Grover en 1996, constituye uno de los resultados fundamentales de la computación cuántica. Permite resolver problemas de búsqueda no estructurada con una complejidad de consultas al oráculo de orden $O(\sqrt{N})$, frente al orden $O(N)$ correspondiente a los procedimientos clásicos generales \cite{grover1996}. Esta ventaja depende de la capacidad de mantener y manipular de forma coherente las amplitudes cuánticas durante sucesivas aplicaciones del algoritmo.
+
+La presencia de ruido es, por tanto, un factor determinante para la utilidad práctica de la búsqueda cuántica. Los errores en las operaciones, la pérdida de coherencia, las perturbaciones sistemáticas y las imperfecciones de medida pueden modificar la evolución del estado y disminuir la probabilidad de obtener la solución marcada. Desde finales de la década de 1990 se han desarrollado modelos analíticos, estudios numéricos y demostraciones en procesadores cuánticos para analizar estos efectos \cite{pablonorman1999,salas2008,cohn2016,pokharel2024}.
+
+La literatura ha evolucionado desde el estudio de perturbaciones individuales hacia comparaciones de canales de ruido, estimaciones de umbrales de tolerancia y técnicas de mejora del rendimiento. Un aspecto especialmente relevante es la posible diferencia entre el número de iteraciones que maximiza la probabilidad de éxito en ausencia de ruido y el que resulta conveniente cuando los errores se acumulan \cite{cohn2016,leng2025}.
+
+\section{Fundamentos teóricos de la búsqueda de Grover}
+
+Para un espacio de búsqueda de $N=2^n$ elementos y una única solución marcada, la ejecución ideal comienza con una superposición uniforme de los estados de la base computacional. En cada iteración se aplica un \emph{oráculo de fase}, que distingue el estado objetivo, seguido de un \emph{operador de difusión}, que produce la amplificación de amplitud. El procedimiento se interpreta como una rotación en el subespacio generado por el estado marcado y la superposición normalizada de los estados no marcados.
+
+Boyer, Brassard, H\o yer y Tapp realizaron un análisis preciso de la probabilidad de éxito y del número de consultas necesarias, incluyendo escenarios con múltiples soluciones \cite{boyer1998}. Para una única solución, la probabilidad ideal tras $r$ iteraciones viene dada por
+
+\begin{equation}
+    P_{\mathrm{ideal}}(r)=\sin^2\!\bigl((2r+1)\theta\bigr),
+    \qquad
+    \theta=\arcsin\!\left(\frac{1}{\sqrt{N}}\right).
+    \label{eq:grover_ideal}
+\end{equation}
+
+El primer máximo de esta probabilidad se alcanza para un número entero de iteraciones próximo a
+
+\begin{equation}
+    r_{\mathrm{ideal}}\simeq\frac{\pi}{4\theta}-\frac{1}{2}
+    \simeq\frac{\pi}{4}\sqrt{N}-\frac{1}{2},
+    \label{eq:iteraciones_ideales}
+\end{equation}
+
+con el redondeo apropiado al número entero de iteraciones. La función de probabilidad no es monótona: ejecutar iteraciones adicionales después de un máximo puede reducir el éxito incluso en ausencia de errores. Esta propiedad constituye una referencia esencial para distinguir las oscilaciones propias del algoritmo de las modificaciones introducidas por el ruido \cite{boyer1998}.
+
+\section{Modelización del ruido cuántico}
+
+El análisis de algoritmos cuánticos bajo ruido suele formularse mediante \emph{canales cuánticos}, que transforman una matriz de densidad $\rho$ en otro estado físico admisible. De manera general, un canal puede expresarse mediante operadores de Kraus:
+
+\begin{equation}
+    \mathcal{E}(\rho)=\sum_j K_j\rho K_j^{\dagger},
+    \qquad \sum_j K_j^{\dagger}K_j=I.
+\end{equation}
+
+Esta representación permite describir procesos estocásticos y pérdida de coherencia que no pueden modelarse como una única transformación unitaria sobre el registro observado. Los trabajos sobre la sensibilidad de Grover a estos canales utilizan diversas familias de errores, que no deben considerarse equivalentes \cite{ijaz2023,khan2026}.
+
+\subsection{Ruido despolarizante}
+
+El canal despolarizante aproxima el estado a una mezcla uniforme. Para un sistema de $n$ qubits, una parametrización habitual es
+
+\begin{equation}
+    \mathcal{D}_{\lambda}(\rho)=(1-\lambda)\rho+
+    \lambda\frac{I}{2^n},\qquad 0\leq\lambda\leq 1.
+    \label{eq:despolarizante}
+\end{equation}
+
+La ecuación representa una interpolación entre el estado original y el estado completamente mezclado. Resulta importante diferenciar entre un \emph{canal global}, aplicado conjuntamente a todo el registro, y canales \emph{locales}, aplicados a qubits individuales. La localización de los errores y el momento en que se insertan en el circuito afectan a las conclusiones obtenidas sobre su tolerancia \cite{cohn2016}.
+
+\subsection{Errores de Pauli y decoherencia}
+
+Los modelos \emph{bit-flip}, \emph{phase-flip} y \emph{bit-phase-flip} representan perturbaciones relacionadas, respectivamente, con las operaciones de Pauli $X$, $Z$ e $Y$. Aunque sus efectos pueden parecer similares cuando se observan únicamente probabilidades finales, difieren en la forma en que alteran las fases, las poblaciones de los estados y la interferencia cuántica. Ijaz y Faryad compararon explícitamente estas tres familias con el ruido despolarizante al estudiar variantes de Grover de pocos qubits \cite{ijaz2023}.
+
+Otros modelos habituales son el \emph{amortiguamiento de amplitud}, asociado a procesos de relajación energética, y el \emph{amortiguamiento de fase}, que reduce las coherencias sin exigir la misma evolución de poblaciones. Los errores coherentes de control, por su parte, pueden introducir desviaciones sistemáticas en las rotaciones implementadas. Una revisión analítica reciente examina conjuntamente varios de estos mecanismos y señala que su efecto depende también de la etapa de la búsqueda en la que aparecen \cite{khan2026}.
+
+\subsection{Errores de lectura}
+
+Los errores de lectura corresponden a una asignación incorrecta del resultado clásico de la medida. A diferencia de los canales que alteran el estado durante el cálculo, un error de lectura introducido exclusivamente al final modifica la distribución observada, sin perturbar la evolución previa del circuito. Los estudios experimentales distinguen estos errores de los errores de puerta y evalúan de manera específica su mitigación \cite{pokharel2024}. Por ello, las conclusiones sobre acumulación de errores a lo largo de las iteraciones no son directamente transferibles a los modelos que solo afectan a la medición.
+
+\section{Evolución de las investigaciones sobre Grover con ruido}
+
+\subsection{Primeros estudios de robustez}
+
+Pablo-Norman y Ruiz-Altaba analizaron en 1999 el efecto de perturbaciones gaussianas aleatorias introducidas durante las etapas del algoritmo. El trabajo estudió la relación entre la magnitud del ruido admisible, el tamaño del espacio de búsqueda y la probabilidad de localizar el objetivo, estableciendo uno de los primeros análisis sistemáticos de la robustez de Grover sin corrección cuántica de errores \cite{pablonorman1999}.
+
+Posteriormente, Salas investigó numéricamente el efecto de un canal despolarizante asociado tanto a la evolución de los qubits como a la aplicación de puertas. Sus resultados mostraron un amortiguamiento aproximadamente exponencial de los máximos sucesivos de probabilidad y una disminución de la tolerancia al error conforme aumenta el tamaño del problema. El autor obtuvo umbrales concretos para el modelo considerado; dichos valores no deben extrapolarse sin más a otros modelos o arquitecturas \cite{salas2008}.
+
+\subsection{Despolarización global frente a local}
+
+Cohn, Fonseca de Oliveira, Buksman y García López de Lacalle estudiaron la búsqueda de Grover bajo canales despolarizantes globales y locales. Su trabajo de 2016, orientado al análisis de complejidad, concluyó que el ruido local puede causar una degradación mayor que la despolarización aplicada de manera conjunta a todo el registro. También relacionó el mantenimiento de la ventaja cuántica con intensidades de error que decrecen al aumentar el tamaño de búsqueda \cite{cohn2016}.
+
+Para el caso específico de un canal despolarizante global de intensidad $\gamma$ aplicado después de cada iteración completa, los autores obtuvieron la expresión
+
+\begin{equation}
+    P_{\mathrm{global}}(r,\gamma)=
+    (1-\gamma)^r P_{\mathrm{ideal}}(r)
+    +\frac{1-(1-\gamma)^r}{N}.
+    \label{eq:global}
+\end{equation}
+
+Este resultado permite separar la contribución de la evolución ideal, atenuada por el ruido acumulado, de la contribución uniforme del estado completamente mezclado. La fórmula corresponde a esa colocación particular del canal: no describe automáticamente el efecto de aplicar canales diferentes después de cada puerta elemental.
+
+La misma investigación muestra que el máximo inicial de probabilidad puede desplazarse hacia números menores de iteraciones cuando aumenta la despolarización. Esta conclusión relaciona de forma directa la acumulación de errores con la elección del momento en el que se detiene el algoritmo \cite{cohn2016}.
+
+\subsection{Comparación de implementaciones y modelos de ruido}
+
+Ijaz y Faryad estudiaron en 2023 algoritmos de búsqueda de Grover y estimación de fase formulados mediante \emph{quantum singular value transformation} (QSVT), comparándolos con las implementaciones convencionales. Consideraron canales \emph{bit-flip}, \emph{phase-flip}, \emph{bit-phase-flip} y despolarizantes, y examinaron circuitos de pocos qubits \cite{ijaz2023}.
+
+Los autores observaron que la formulación basada en QSVT presentaba, en las configuraciones examinadas, una sensibilidad al ruido mayor que la implementación convencional. Identificaron el incremento del número de puertas y de la profundidad como factores relevantes. Este resultado pone de manifiesto que dos construcciones algorítmicamente equivalentes en condiciones ideales pueden mostrar distinta robustez cuando cambia su coste de implementación.
+
+\subsection{Validación experimental y mitigación de errores}
+
+Pokharel y Lidar publicaron en 2024 una demostración de búsqueda de Grover con hasta cinco qubits de búsqueda en dos plataformas de IBM. El trabajo empleó secuencias de desacoplo dinámico para suprimir errores, además de mitigación de errores de medida, y comunicó probabilidades de éxito superiores a referencias clásicas bajo las condiciones estudiadas. Los autores señalaron que la mitigación de medida por sí sola no bastaba para alcanzar esos resultados en los casos más exigentes \cite{pokharel2024}.
+
+En 2025, AbuGhanem caracterizó circuitos de Grover de tres qubits de búsqueda sobre procesadores superconductores IBM de 127 qubits físicos, considerando distintos oráculos con una o dos soluciones. El estudio comparó resultados ideales, simulaciones ruidosas y ejecuciones sobre hardware. Las diferencias observadas ilustran que los modelos de ruido simulados no reproducen necesariamente todos los efectos de los dispositivos reales \cite{abughanem2025}.
+
+\subsection{Estrategias de búsqueda tolerantes al ruido}
+
+Leng, Yang y Wang propusieron en 2025 un método de búsqueda tolerante al ruido basado en la predicción de la probabilidad de éxito. Presentaron análisis teóricos y demostraciones experimentales en diferentes configuraciones de computación cuántica, y mostraron mejoras respecto al procedimiento original en los escenarios evaluados \cite{leng2025}. Esta línea de trabajo refleja la transición desde la caracterización pasiva del deterioro hacia estrategias que adaptan la ejecución a las condiciones de error.
+
+Más recientemente, Khan y Faryad presentaron en noviembre de 2026 una prepublicación que analiza de forma conjunta ruido local incoherente y errores coherentes de rotación. El estudio desarrolla relaciones analíticas para la pérdida de probabilidad, el desplazamiento del punto de parada y los regímenes en que se deteriora la ventaja cuadrática de Grover. También distingue la sensibilidad de distintos canales y del momento de aparición del error. Al tratarse de una \textbf{prepublicación}, sus resultados deben diferenciarse de los trabajos ya publicados y revisados por pares \cite{khan2026}.
+
+\section{Número de iteraciones y criterios de rendimiento}
+
+La literatura distingue entre maximizar la probabilidad de encontrar la solución en una sola ejecución y minimizar el coste medio de la búsqueda cuando se permiten repeticiones. El primer criterio se expresa como
+
+\begin{equation}
+    r_{P}=\underset{r\in\mathbb{N}_0}{\operatorname{arg\,max}}\;P_{\mathrm{exito}}(r),
+\end{equation}
+
+mientras que el segundo considera conjuntamente las consultas realizadas y la probabilidad de éxito. Bajo una convención que contabiliza $r$ consultas al oráculo por intento, un modelo simplificado del coste esperado es proporcional a
+
+\begin{equation}
+    C(r)\propto\frac{r}{P_{\mathrm{exito}}(r)}, \qquad r\geq 1.
+\end{equation}
+
+El coste exacto depende de si se incluyen la preparación, la verificación y otros recursos. Cohn y colaboradores destacan precisamente la diferencia entre maximizar la probabilidad y minimizar el número medio de consultas \cite{cohn2016}. Así, un número de iteraciones óptimo para un criterio no tiene por qué serlo para otro.
+
+En los modelos con ruido acumulativo, el aumento de iteraciones combina dos efectos: la amplificación ideal favorece inicialmente el estado objetivo, mientras que los canales de error reducen su peso o alteran la interferencia. En consecuencia, el máximo de probabilidad puede desplazarse respecto al primer máximo ideal, aunque el grado y la dirección del desplazamiento dependen del canal empleado, de su intensidad y de la localización de los errores \cite{cohn2016,khan2026}.
+
+\section{Síntesis del estado del arte}
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.18}
+\begin{tabular}{@{}p{2.6cm}p{5.2cm}p{5.2cm}@{}}
+\toprule
+\textbf{Línea} & \textbf{Contribución de la literatura} & \textbf{Limitación o consideración} \\
+\midrule
+Análisis ideal & Probabilidad y complejidad de consultas conocidas analíticamente \cite{grover1996,boyer1998}. & La complejidad de consultas no mide directamente el coste físico ni el de la emulación. \\
+\addlinespace
+Perturbaciones y decoherencia & Estudio de robustez y amortiguamiento de la probabilidad bajo errores \cite{pablonorman1999,salas2008}. & Los umbrales dependen del modelo y del lugar donde se introduce el ruido. \\
+\addlinespace
+Despolarización & Comparación entre canales globales y locales y análisis del punto de parada \cite{cohn2016}. & Las expresiones analíticas suelen presuponer una colocación concreta del canal. \\
+\addlinespace
+Implementaciones alternativas & Comparación de Grover convencional y QSVT bajo varios canales \cite{ijaz2023}. & Número de puertas y profundidad afectan a la sensibilidad al error. \\
+\addlinespace
+Hardware y mitigación & Demostraciones experimentales y estrategias de supresión y mitigación \cite{pokharel2024,abughanem2025}. & La simulación no representa necesariamente todo el ruido físico real. \\
+\addlinespace
+Optimización bajo ruido & Métodos tolerantes al ruido y análisis del coste y del número de iteraciones \cite{leng2025,khan2026}. & Los resultados dependen del criterio de rendimiento y de las hipótesis sobre el ruido. \\
+\bottomrule
+\end{tabular}
+\caption{Principales líneas de investigación sobre Grover en presencia de ruido.}
+\label{tab:resumen_literatura}
+\end{table}
+
+En conjunto, la literatura establece que la robustez de Grover no puede caracterizarse únicamente mediante la intensidad nominal del ruido. También son relevantes su naturaleza física o matemática, la granularidad de aplicación, la profundidad y composición del circuito, el tamaño del espacio de búsqueda y el criterio utilizado para valorar el rendimiento.
+
+Existe evidencia teórica de que el ruido acumulativo puede adelantar el máximo útil de probabilidad y, si es suficientemente intenso, comprometer la ventaja en consultas de la búsqueda cuántica \cite{cohn2016,khan2026}. Asimismo, las investigaciones con distintos canales y plataformas muestran que no debe extrapolarse sin comprobación un resultado obtenido con un modelo global a un circuito con errores locales, ni una conclusión de simulación a un dispositivo real \cite{ijaz2023,abughanem2025}.
+
+La tendencia reciente combina, por tanto, tres objetivos complementarios: caracterizar con precisión el deterioro producido por cada canal, seleccionar estrategias de ejecución adecuadas a las condiciones de ruido y desarrollar procedimientos de supresión o mitigación que permitan conservar una probabilidad de éxito útil \cite{pokharel2024,leng2025,khan2026}.
+
+\begin{thebibliography}{99}
+\bibitem{grover1996}
+L.~K. Grover, ``A fast quantum mechanical algorithm for database search'', en \emph{Proceedings of the 28th Annual ACM Symposium on Theory of Computing}, pp.~212--219, 1996. DOI: \href{https://doi.org/10.1145/237814.237866}{10.1145/237814.237866}.
+
+\bibitem{boyer1998}
+M.~Boyer, G.~Brassard, P.~H\o yer y A.~Tapp, ``Tight bounds on quantum searching'', \emph{Fortschritte der Physik}, vol.~46, n.os~4--5, pp.~493--505, 1998. \url{https://arxiv.org/abs/quant-ph/9605034}.
+
+\bibitem{pablonorman1999}
+B.~Pablo-Norman y M.~Ruiz-Altaba, ``Noise in Grover's quantum search algorithm'', \emph{Physical Review A}, vol.~61, art.~012301, publicado en diciembre de 1999. DOI: \href{https://doi.org/10.1103/PhysRevA.61.012301}{10.1103/PhysRevA.61.012301}.
+
+\bibitem{salas2008}
+P.~J. Salas, ``Noise effect on Grover algorithm'', \emph{The European Physical Journal D}, vol.~46, pp.~365--373, 2008. DOI: \href{https://doi.org/10.1140/epjd/e2007-00295-1}{10.1140/epjd/e2007-00295-1}.
+
+\bibitem{cohn2016}
+I.~Cohn, A.~L. Fonseca de Oliveira, E.~Buksman y J.~García López de Lacalle, ``Grover's search with local and total depolarizing channel errors: Complexity analysis'', \emph{International Journal of Quantum Information}, vol.~14, n.o~2, art.~1650009, 2016. DOI: \href{https://doi.org/10.1142/S021974991650009X}{10.1142/S021974991650009X}.
+
+\bibitem{ijaz2023}
+M.~A. Ijaz y M.~Faryad, ``Noise analysis of Grover and phase estimation algorithms implemented as quantum singular value transformations for a small number of noisy qubits'', \emph{Scientific Reports}, vol.~13, art.~20144, 2023. DOI: \href{https://doi.org/10.1038/s41598-023-47246-x}{10.1038/s41598-023-47246-x}.
+
+\bibitem{pokharel2024}
+B.~Pokharel y D.~A. Lidar, ``Better-than-classical Grover search via quantum error detection and suppression'', \emph{npj Quantum Information}, vol.~10, art.~23, 2024. DOI: \href{https://doi.org/10.1038/s41534-023-00794-6}{10.1038/s41534-023-00794-6}.
+
+\bibitem{abughanem2025}
+M.~AbuGhanem, ``Characterizing Grover search algorithm on large-scale superconducting quantum computers'', \emph{Scientific Reports}, vol.~15, art.~1281, 2025. DOI: \href{https://doi.org/10.1038/s41598-024-80188-6}{10.1038/s41598-024-80188-6}.
+
+\bibitem{leng2025}
+J.~Leng, F.~Yang y X.-B.~Wang, ``Noise-tolerant Grover's algorithm via success-probability prediction'', \emph{Physical Review Research}, vol.~7, art.~L012017, 2025. DOI: \href{https://doi.org/10.1103/PhysRevResearch.7.L012017}{10.1103/PhysRevResearch.7.L012017}.
+
+\bibitem{khan2026}
+I.~T.~B. Khan y M.~Faryad, ``Loss of the quadratic speedup in Grover search under local and coherent noise'', \emph{arXiv}, prepublicación arXiv:2611.16398, 12 de noviembre de 2026. \url{https://arxiv.org/abs/2611.16398}. \emph{Prepublicación, sin revisión por pares verificada}.
+\end{thebibliography}
+
+\end{document}
