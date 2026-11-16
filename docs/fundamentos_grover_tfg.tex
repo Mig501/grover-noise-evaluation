@@ -1,0 +1,287 @@
+\documentclass[11pt,a4paper]{article}
+
+% Codificación, idioma y tipografía
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-noquoting]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% Matemáticas, tablas y diseño
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\usepackage{booktabs,tabularx,array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\usepackage{hyperref}
+\geometry{margin=2.5cm}
+\hypersetup{colorlinks=true,linkcolor=blue!60!black,urlcolor=blue!60!black}
+\setlist[itemize]{topsep=3pt,itemsep=3pt}
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.25}
+
+\title{Fundamentos del algoritmo de Grover\\[2mm]
+\large Evaluación bajo distintos modelos de ruido}
+\author{Trabajo de Fin de Grado --- Documento de estudio}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\bigskip
+
+\section{Objetivo de esta fase}
+
+El objetivo de este primer apartado es comprender \textbf{cómo funciona el algoritmo de Grover}, por qué es importante elegir correctamente el número de iteraciones y cómo puede afectar el ruido a su comportamiento. También se identifican las herramientas necesarias para su futura implementación.
+
+En esta fase se estudian los fundamentos teóricos; todavía no es necesario programar los circuitos.
+
+\section{¿Qué es el algoritmo de Grover?}
+
+El algoritmo de Grover, propuesto por Lov Grover en 1996, es un algoritmo cuántico de \textbf{búsqueda no estructurada}. Su principal ventaja consiste en reducir el número de consultas al oráculo necesarias para encontrar una solución.
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Método} & \textbf{Complejidad de consultas} \\
+\midrule
+Búsqueda clásica no estructurada & $O(N)$ \\
+Algoritmo de Grover & $O(\sqrt{N})$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Aquí, $N$ es el número de elementos del espacio de búsqueda. Por ejemplo, si $N=1\,000\,000$, una búsqueda clásica puede requerir del orden de un millón de comprobaciones, mientras que Grover necesita del orden de un millar de consultas al oráculo.
+
+\textbf{Importante:} esta ventaja corresponde al \emph{número de consultas al oráculo}; no implica que la emulación de Grover en un ordenador clásico sea más rápida que una búsqueda clásica equivalente.
+
+\section{Conceptos cuánticos necesarios}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}p{3.0cm}X@{}}
+\toprule
+Concepto & Explicación \\
+\midrule
+Qubit & Unidad de información cuántica que puede estar en superposición de los estados $\lvert 0\rangle$ y $\lvert 1\rangle$. \\
+Superposición & Combinación de estados básicos mediante amplitudes cuánticas. \\
+Puertas cuánticas & Operaciones que transforman el estado de uno o varios qubits. \\
+Interferencia & Fenómeno que permite reforzar o cancelar amplitudes. \\
+Medición & Proceso que produce un resultado clásico según las probabilidades del estado cuántico. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Las puertas más relevantes para el proyecto son:
+
+\begin{itemize}
+    \item \textbf{H (Hadamard):} permite crear superposiciones.
+    \item \textbf{X (Pauli-X):} intercambia $\lvert 0\rangle$ y $\lvert 1\rangle$.
+    \item \textbf{Z (Pauli-Z):} modifica la fase de $\lvert 1\rangle$.
+    \item \textbf{CZ y puertas controladas o multicontroladas:} facilitan la construcción de oráculos y operadores de difusión.
+\end{itemize}
+
+No es necesario dominar toda la computación cuántica para empezar, pero sí entender cómo se utilizan estas operaciones en el algoritmo.
+
+\section{Funcionamiento del algoritmo de Grover}
+
+El procedimiento comprende cuatro etapas:
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=8mm,
+  block/.style={draw=blue!55!black,fill=blue!4,rounded corners=3pt,
+                align=center,text width=10.8cm,minimum height=1.0cm},
+  arr/.style={-{Latex[length=2.6mm]},thick,draw=blue!65!black}
+]
+\node[block] (ini) {\textbf{1. Inicialización}\\Superposición uniforme de los estados posibles};
+\node[block,below=of ini] (ora) {\textbf{2. Oráculo}\\Cambio de fase del estado que cumple la condición};
+\node[block,below=of ora] (dif) {\textbf{3. Difusión}\\Amplificación de la amplitud de la solución};
+\node[block,below=of dif] (med) {\textbf{4. Medición}\\Obtención de un resultado clásico};
+\draw[arr] (ini) -- (ora);
+\draw[arr] (ora) -- (dif);
+\draw[arr] (dif) -- (med);
+\draw[arr] (dif.east) -- ++(9mm,0) |- node[right,pos=0.30,font=\footnotesize]{Repetir iteraciones} (ora.east);
+\end{tikzpicture}
+\end{center}
+
+\subsection{Ejemplo con dos qubits}
+
+Con dos qubits se dispone de cuatro estados posibles:
+\[
+\bigl\{\lvert 00\rangle,\lvert 01\rangle,\lvert 10\rangle,\lvert 11\rangle\bigr\}.
+\]
+
+Supongamos que el objetivo es encontrar el estado $\lvert 11\rangle$.
+
+\textbf{Paso 1. Inicialización.} Aplicando una puerta Hadamard a cada qubit, se obtiene
+\[
+\lvert\psi\rangle=\frac12\bigl(\lvert 00\rangle+\lvert 01\rangle+\lvert 10\rangle+\lvert 11\rangle\bigr).
+\]
+Cada estado tiene inicialmente una probabilidad del $25\%$ de ser medido.
+
+\textbf{Paso 2. Oráculo.} Se cambia el signo de la amplitud asociada al estado buscado:
+\[
+\lvert\psi'\rangle=\frac12\bigl(\lvert 00\rangle+\lvert 01\rangle+\lvert 10\rangle-\lvert 11\rangle\bigr).
+\]
+El cambio de fase no modifica por sí solo las probabilidades de medición.
+
+\textbf{Paso 3. Difusión.} Se aplica una reflexión de las amplitudes alrededor de su media. En este ejemplo, las amplitudes de los estados no deseados pasan a cero y la de $\lvert 11\rangle$ pasa a uno.
+
+\textbf{Paso 4. Medición.} En ausencia de ruido, una iteración permite obtener $\lvert 11\rangle$ con probabilidad del $100\%$.
+
+\begin{center}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Estado} & \textbf{Antes de Grover} & \textbf{Tras una iteración} \\
+\midrule
+$\lvert 00\rangle$ & $25\%$ & $0\%$ \\
+$\lvert 01\rangle$ & $25\%$ & $0\%$ \\
+$\lvert 10\rangle$ & $25\%$ & $0\%$ \\
+$\lvert 11\rangle$ & $25\%$ & $100\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Número de iteraciones de Grover}
+
+Una \emph{iteración de Grover} aplica el oráculo seguido del operador de difusión. El número de iteraciones adecuado depende del tamaño del espacio de búsqueda.
+
+Para \textbf{una única solución marcada}, la aproximación habitual es
+\[
+\boxed{r_{\mathrm{opt}}\approx\frac{\pi}{4}\sqrt{N}.}
+\]
+
+La probabilidad de éxito ideal después de $r$ iteraciones viene dada por
+\[
+\boxed{P(r)=\sin^2\!\bigl((2r+1)\theta\bigr),\qquad
+\theta=\arcsin\!\left(\frac{1}{\sqrt{N}}\right).}
+\]
+
+Para un análisis más preciso, se selecciona un número entero de iteraciones cercano a
+\[
+r\approx \frac{\pi}{4\theta}-\frac12.
+\]
+
+\subsection{Ejemplo con tres qubits}
+
+Con tres qubits hay $N=2^3=8$ estados y, si solo existe una solución, la probabilidad inicial de acertar es del $12{,}5\%$.
+
+\begin{center}
+\begin{tabular}{@{}cc@{}}
+\toprule
+\textbf{Iteraciones ($r$)} & \textbf{Probabilidad ideal de éxito} \\
+\midrule
+0 & $12{,}50\%$ \\
+1 & $78{,}13\%$ \\
+2 & $94{,}53\%$ \\
+3 & $33{,}01\%$ \\
+4 & $1{,}22\%$ \\
+5 & $54{,}80\%$ \\
+6 & $99{,}98\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Dos iteraciones ofrecen un valor muy elevado dentro del \emph{primer máximo} de amplificación. La probabilidad \textbf{no aumenta de manera monótona}: si se siguen aplicando iteraciones, disminuye y posteriormente puede aumentar de nuevo. Por tanto, realizar más iteraciones no garantiza una mejora.
+
+\section{Modelos de ruido}
+
+En un circuito ideal, las puertas y las mediciones se consideran perfectas. En cambio, los sistemas cuánticos reales están expuestos a errores. En este TFG se reproducirán mediante \textbf{modelos de ruido simulados}.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}p{3.0cm}X X@{}}
+\toprule
+Modelo & Qué representa & Posible efecto sobre Grover \\
+\midrule
+Despolarización & Alteraciones del estado asociadas a operaciones imperfectas. & Deterioro de la amplificación y acumulación de errores cuando aumenta el número de puertas. \\
+Error de lectura & Errores al registrar los bits obtenidos en la medición. & Observación de un estado incorrecto aunque el circuito haya preparado el correcto. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+El \textbf{ruido despolarizante} aplicado a puertas resulta especialmente interesante para estudiar las iteraciones: aumentar su número añade operaciones y, con ello, más oportunidades de sufrir errores.
+
+Los \textbf{errores de lectura}, si solo se introducen al final del circuito, no se acumulan durante las iteraciones. Por ello, conviene analizarlos por separado.
+
+\subsection{Hipótesis del TFG}
+
+\begin{quote}
+\emph{Bajo determinadas condiciones de ruido, ejecutar el algoritmo de Grover con menos iteraciones que las óptimas en condiciones ideales puede proporcionar una mayor probabilidad de éxito.}
+\end{quote}
+
+Se trata de una \textbf{hipótesis experimental}, no de una conclusión anticipada. Se evaluará mediante simulaciones con diferentes tamaños de problema, intensidades de ruido y números de iteraciones.
+
+\section{Tecnologías y herramientas}
+
+\subsection{Entorno de desarrollo}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}p{2.8cm}X@{}}
+\toprule
+Tecnología & Uso previsto \\
+\midrule
+Python & Implementación, automatización de experimentos y análisis de resultados. \\
+Qiskit & Construcción de circuitos, oráculos y operadores de Grover. \\
+Qiskit Aer & Simulación de circuitos ideales y ruidosos sin hardware cuántico físico. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Dentro de Qiskit Aer resultan especialmente relevantes los métodos de simulación \texttt{statevector}, para estudiar estados puros e ideales, y \texttt{density\_matrix}, que permite representar estados mixtos asociados a procesos ruidosos.
+
+\subsection{Interfaces principales}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}>{\ttfamily}p{4.3cm}X@{}}
+\toprule
+\multicolumn{1}{@{}l}{\textbf{Herramienta}} & \textbf{Función} \\
+\midrule
+QuantumCircuit & Crear circuitos cuánticos. \\
+grover\_operator() & Construir el operador de Grover a partir de un oráculo. \\
+transpile() & Adaptar y compilar circuitos para un objetivo de ejecución. \\
+AerSimulator & Ejecutar las simulaciones. \\
+NoiseModel & Configurar modelos de ruido. \\
+depolarizing\_error() & Crear errores despolarizantes. \\
+ReadoutError & Configurar errores de lectura. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Para una implementación nueva, es preferible consultar la API actual de Qiskit y evitar copiar sin revisar tutoriales basados en componentes obsoletos.
+
+\section{Recursos recomendados}
+
+\begin{enumerate}
+    \item \textbf{IBM Quantum Learning --- Grover's Algorithm.} Introducción a superposición, oráculos, difusión e iteraciones.\\
+    \url{https://quantum.cloud.ibm.com/learning/en/modules/computer-science/grovers}
+    \item \textbf{Qiskit --- Grover's Algorithm Tutorial.} Tutorial práctico para construir circuitos de Grover.\\
+    \url{https://quantum.cloud.ibm.com/docs/en/tutorials/grovers-algorithm}
+    \item \textbf{Qiskit Aer --- Building Noise Models.} Documentación para crear y aplicar modelos de ruido.\\
+    \url{https://qiskit.github.io/qiskit-aer/tutorials/3_building_noise_models.html}
+\end{enumerate}
+
+Como referencia científica original puede consultarse:
+\begin{quote}
+L. K. Grover, ``A fast quantum mechanical algorithm for database search'', \emph{Proceedings of the 28th Annual ACM Symposium on Theory of Computing}, 1996. \url{https://arxiv.org/abs/quant-ph/9605043}
+\end{quote}
+
+\section{Conocimientos necesarios antes de implementar}
+
+Antes de programar deberíamos poder explicar:
+\begin{itemize}
+    \item Qué problema resuelve Grover y en qué sentido mejora una búsqueda clásica.
+    \item Cómo se forma una superposición con puertas Hadamard.
+    \item Cómo funciona un oráculo de fase y por qué hace falta la difusión.
+    \item Por qué existe un número de iteraciones adecuado y qué sucede si se supera.
+    \item Cómo afectan los errores de puertas y los errores de lectura a la probabilidad de éxito.
+    \item Para qué se utilizan Qiskit y Qiskit Aer.
+\end{itemize}
+
+\section{Siguiente paso propuesto}
+
+Se recomienda comenzar implementando una búsqueda con \textbf{dos qubits} y el estado objetivo $\lvert 11\rangle$. Una vez comprobado su funcionamiento ideal, se podrá ampliar a tres y cuatro qubits. Posteriormente se incorporarán modelos de ruido para comparar probabilidades de éxito, tiempos de emulación y consumo de memoria.
+
+\end{document}
